@@ -1,29 +1,34 @@
 using System.Text.Json;
-using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using OpenTelemetry.Metrics;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
-using OpenTelemetryDatadogPoC;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-// Define the resource builder with service information
 var resourceBuilder = ResourceBuilder.CreateDefault()
     .AddService(serviceName: "OpenTelemetryDatadogPoC", serviceVersion: "1.0.0");
 
 var apiKey = builder.Configuration["Otlp:ApiKey"]!;
 
-// Configure OpenTelemetry
+builder.Logging.AddOpenTelemetry(openTelemetryBuilder =>
+{
+    var url = builder.Configuration["Seq:LogsUrl"]!;
+    openTelemetryBuilder.IncludeScopes = true;
+    openTelemetryBuilder.AddOtlpExporter(otlpExporterOptions =>
+    {
+        otlpExporterOptions.Endpoint = new Uri(url);
+        otlpExporterOptions.Headers = $"X-SEC-ApiKey={apiKey}";
+        otlpExporterOptions.Protocol = OtlpExportProtocol.HttpProtobuf;
+    });
+});
+
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracerProviderBuilder =>
     {
@@ -32,14 +37,13 @@ builder.Services.AddOpenTelemetry()
             .SetResourceBuilder(resourceBuilder)
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
-            .AddProcessor(new SensitiveDataProcessor()) // Custom processor for scrubbing
             .AddOtlpExporter(options =>
             {
                 options.Endpoint = new Uri(url);
                 options.Headers = $"X-SEC-ApiKey={apiKey}";
                 options.Protocol = OtlpExportProtocol.HttpProtobuf;
             });
-    })
+    });
     // .WithMetrics(meterProviderBuilder =>
     // {
     //     var url = builder.Configuration["Seq:Url"]!;
@@ -54,23 +58,9 @@ builder.Services.AddOpenTelemetry()
     //             options.Protocol = OtlpExportProtocol.HttpProtobuf;
     //         });
     // })
-    .WithLogging(loggingProviderBuilder =>
-    {
-        var url = builder.Configuration["Seq:LogsUrl"]!;
-        loggingProviderBuilder
-            .SetResourceBuilder(resourceBuilder)
-            //.AddProcessor(new SensitiveDataProcessor())
-            .AddOtlpExporter(options =>
-            {
-                options.Endpoint = new Uri(url);
-                options.Headers = $"X-SEC-ApiKey={apiKey}";
-                options.Protocol = OtlpExportProtocol.HttpProtobuf;
-            });
-    });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -90,11 +80,12 @@ app.MapGet("/weatherforecast", (ILogger<Program> logger) =>
         (
             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
             Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
+            summaries[Random.Shared.Next(summaries.Length)],
+            "234"
         ))
         .ToArray();
     
-    logger.LogInformation("Forecast Response {0}", JsonSerializer.Serialize(forecast));
+    logger.LogInformation("Forecast Response {response}", JsonSerializer.Serialize(forecast));
     return forecast;
 })
 .WithName("GetWeatherForecast")
@@ -102,7 +93,24 @@ app.MapGet("/weatherforecast", (ILogger<Program> logger) =>
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+public class WeatherForecast
 {
+    public WeatherForecast(DateOnly date, int temperatureC, string? summary, string apiKey)
+    {
+        Date = date;
+        TemperatureC = temperatureC;
+        Summary = summary;
+        ApiKey = apiKey;
+    }
+    
+    public DateOnly Date { get; set; }
+    public int TemperatureC { get; set; }
+    
+    public string? Summary { get; set; }
+    
+    public string ApiKey { get; set; }
+    
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
+
+
