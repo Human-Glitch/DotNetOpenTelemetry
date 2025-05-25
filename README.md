@@ -1,12 +1,13 @@
 # DotNetOpenTelemetry
 
-**DotNetOpenTelemetry** is a .NET project demonstrating the integration of OpenTelemetry for observability in .NET applications. This repository showcases how to implement distributed tracing, metrics, and logging using OpenTelemetry in a .NET environment, with [Seq](https://datalust.co/seq) as the observability backend.
+**DotNetOpenTelemetry** is a .NET project demonstrating the integration of OpenTelemetry for observability in .NET applications. This repository showcases how to implement distributed tracing, metrics, and logging using OpenTelemetry in a .NET environment as well as redacting sensitive information via Destructurama, with [Seq](https://datalust.co/seq) as the observability backend.
 
 ## Features
 
 - **Distributed Tracing**: Monitor and diagnose complex applications.
 - **Metrics Collection**: Gather and export metrics for performance analysis.
 - **Logging Integration**: Seamlessly integrate structured logging with OpenTelemetry.
+- **Redactions**: Redact sensitive information when doing structured logging.
 
 ## Getting Started
 
