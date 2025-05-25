@@ -47,6 +47,8 @@
 
 To visualize and analyze the telemetry data, we'll set up [Seq](https://datalust.co/seq) using Docker.
 
+![image](https://github.com/user-attachments/assets/916ffa69-1b04-41e3-8fe2-d756bda8a1d3)
+
 ### 1. Run Seq Using Docker
 
 You can run Seq in a Docker container with the following command:
